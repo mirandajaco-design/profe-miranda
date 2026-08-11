@@ -77,17 +77,6 @@
 
   /* ---------- Resources tab ---------- */
   .resources-wrap.hidden{ display:none; }
-  .repo-card{
-    display:flex; align-items:center; gap:1rem; background:var(--chrome-card); border:1px solid var(--chrome-border);
-    border-radius:12px; padding:1.1rem 1.3rem; margin-bottom:1.8rem; text-decoration:none; color:inherit;
-    transition:border-color .15s ease;
-  }
-  .repo-card:hover{ border-color:var(--gold); }
-  .repo-card .r-ic{ width:2.6rem; height:2.6rem; border-radius:50%; background:var(--gold); color:var(--wine);
-    display:flex; align-items:center; justify-content:center; font-family:var(--display); font-weight:700; font-size:1.2rem; flex-shrink:0; }
-  .repo-card .r-t{ font-weight:700; font-size:0.98rem; }
-  .repo-card .r-d{ font-size:0.82rem; color:var(--chrome-muted); margin-top:0.15rem; }
-  .repo-card .r-arrow{ margin-left:auto; color:var(--chrome-muted); font-size:1.1rem; }
 
   .res-cols{ display:grid; grid-template-columns:1fr 1fr; gap:2rem; }
   @media (max-width:760px){ .res-cols{ grid-template-columns:1fr; } }
@@ -535,7 +524,6 @@
   }
 
   // ---------- Course switcher + Resources tab ----------
-  const REPO_URL = 'https://github.com/mirandajaco-design/profe-miranda';
   const REPO_RAW = 'https://raw.githubusercontent.com/mirandajaco-design/profe-miranda/main';
   let activeView = 'course'; // 'course' | 'resources'
 
@@ -578,15 +566,7 @@
   }
 
   function renderResources(){
-    let html = `<a class="repo-card" href="${REPO_URL}" target="_blank" rel="noopener">
-      <div class="r-ic">◆</div>
-      <div>
-        <div class="r-t">Repositorio en GitHub</div>
-        <div class="r-d">Código fuente de esta página y los 32 archivos .pptx — mirandajaco-design/profe-miranda</div>
-      </div>
-      <div class="r-arrow">↗</div>
-    </a>
-    <div class="res-cols">`;
+    let html = `<div class="res-cols">`;
     COURSES.forEach(c=>{
       html += `<div class="res-col">
         <h3><span class="dot"></span>${esc(c.label)}</h3>
