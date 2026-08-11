@@ -602,8 +602,8 @@
     if(!listEl) return;
     try{
       const [linkFiles, fileFiles] = await Promise.all([
-        fetch(`${REPO_API}/recursos/enlaces`, {headers:{Accept:'application/vnd.github+json'}}).then(r=> r.ok ? r.json() : []),
-        fetch(`${REPO_API}/recursos/archivos`, {headers:{Accept:'application/vnd.github+json'}}).then(r=> r.ok ? r.json() : []),
+        fetch(`${REPO_API}/recursos/enlaces`).then(r=> r.ok ? r.json() : []),
+        fetch(`${REPO_API}/recursos/archivos`).then(r=> r.ok ? r.json() : []),
       ]);
       const linkEntries = (Array.isArray(linkFiles) ? linkFiles : [])
         .filter(f=> f.name && f.name.endsWith('.link') && f.download_url);
