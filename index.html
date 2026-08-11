@@ -77,6 +77,30 @@
 
   /* ---------- Resources tab ---------- */
   .resources-wrap.hidden{ display:none; }
+  .res-extra{ margin-bottom:2.4rem; }
+  .res-extra-title{ font-family:var(--display); font-size:1.15rem; margin:0 0 0.2rem; }
+  .res-items{ display:flex; flex-direction:column; gap:0.5rem; margin:0.9rem 0 1.4rem; }
+  .res-empty{ font-size:0.85rem; color:var(--chrome-muted); font-style:italic; padding:0.4rem 0; }
+  .res-empty a{ color:var(--gold); }
+  .res-add-grid{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+  @media (max-width:760px){ .res-add-grid{ grid-template-columns:1fr; } }
+  .res-add-box{
+    background:var(--chrome-card); border:1px solid var(--chrome-border); border-radius:10px;
+    padding:1rem 1.1rem; display:flex; flex-direction:column; gap:0.55rem;
+  }
+  .res-add-title{ font-weight:700; font-size:0.9rem; }
+  .res-add-box input{
+    font-family:var(--body); font-size:0.85rem; padding:0.5rem 0.7rem; border-radius:7px;
+    border:1px solid var(--chrome-border); background:var(--chrome-bg); color:var(--chrome-ink);
+  }
+  .res-add-box input:focus{ outline:2px solid var(--gold); outline-offset:1px; }
+  .res-add-box input[type="file"]{ padding:0.4rem 0.3rem; }
+  .btn-add{
+    font-family:var(--body); font-size:0.85rem; font-weight:700; color:var(--wine); background:var(--gold);
+    border:none; border-radius:7px; padding:0.55rem 0.8rem; cursor:pointer; text-align:center;
+  }
+  .btn-add:hover{ filter:brightness(1.05); }
+  .res-hint{ font-size:0.74rem; color:var(--chrome-muted); margin:0; line-height:1.35; }
 
   .res-cols{ display:grid; grid-template-columns:1fr 1fr; gap:2rem; }
   @media (max-width:760px){ .res-cols{ grid-template-columns:1fr; } }
@@ -525,6 +549,10 @@
 
   // ---------- Course switcher + Resources tab ----------
   const REPO_RAW = 'https://raw.githubusercontent.com/mirandajaco-design/profe-miranda/main';
+  const REPO_API = 'https://api.github.com/repos/mirandajaco-design/profe-miranda/contents';
+  const REPO_NEW_FILE = 'https://github.com/mirandajaco-design/profe-miranda/new/main';
+  const REPO_UPLOAD = 'https://github.com/mirandajaco-design/profe-miranda/upload/main/recursos/archivos';
+  const PAGES_URL = 'https://mirandajaco-design.github.io/profe-miranda/';
   let activeView = 'course'; // 'course' | 'resources'
 
   function slugify(title){
@@ -565,8 +593,71 @@
     });
   }
 
+  function newLinkFilename(){
+    return 'recursos/enlaces/' + Date.now() + '-' + Math.random().toString(36).slice(2,8) + '.link';
+  }
+
+  async function loadResourceItems(){
+    const listEl = document.getElementById('resItemsList');
+    if(!listEl) return;
+    try{
+      const [linkFiles, fileFiles] = await Promise.all([
+        fetch(`${REPO_API}/recursos/enlaces`, {headers:{Accept:'application/vnd.github+json'}}).then(r=> r.ok ? r.json() : []),
+        fetch(`${REPO_API}/recursos/archivos`, {headers:{Accept:'application/vnd.github+json'}}).then(r=> r.ok ? r.json() : []),
+      ]);
+      const linkEntries = (Array.isArray(linkFiles) ? linkFiles : [])
+        .filter(f=> f.name && f.name.endsWith('.link') && f.download_url);
+      const links = (await Promise.all(linkEntries.map(async f=>{
+        try{
+          const text = await fetch(f.download_url).then(r=> r.ok ? r.text() : '');
+          const titleMatch = text.match(/^TITLE:\s*(.+)$/m);
+          const urlMatch = text.match(/^URL:\s*(.+)$/m);
+          if (!titleMatch || !urlMatch) return null;
+          return { type:'link', title: titleMatch[1].trim(), url: urlMatch[1].trim() };
+        } catch(e){ return null; }
+      }))).filter(Boolean);
+      const files = (Array.isArray(fileFiles) ? fileFiles : [])
+        .filter(f=> f.name && f.name !== '.gitkeep')
+        .map(f=>({ type:'file', title: f.name, url: f.download_url }));
+      const items = [...links, ...files];
+      if (!items.length){
+        listEl.innerHTML = `<div class="res-empty">Todavía no hay enlaces ni archivos. Sé el primero en agregar uno con las cajas de abajo.</div>`;
+        return;
+      }
+      listEl.innerHTML = items.map(it=>`
+        <a class="res-row" href="${esc(it.url)}" target="_blank" rel="noopener">
+          <span class="res-n">${it.type==='link' ? '🔗' : '📄'}</span>
+          <span class="res-name">${esc(it.title)}</span>
+          <span class="res-dl">${it.type==='link' ? 'enlace ↗' : 'archivo ↓'}</span>
+        </a>`).join('');
+    } catch(e){
+      listEl.innerHTML = `<div class="res-empty">Esta lista se carga en vivo desde GitHub y no está disponible en esta vista previa. <a href="${PAGES_URL}" target="_blank" rel="noopener">Ábrela en el sitio publicado ↗</a></div>`;
+    }
+  }
+
   function renderResources(){
-    let html = `<div class="res-cols">`;
+    let html = `<div class="res-extra">
+      <h3 class="res-extra-title">Enlaces y archivos del curso</h3>
+      <div class="res-meta">Compartidos por el docente — visibles para cualquiera que entre al sitio.</div>
+      <div class="res-items" id="resItemsList"><div class="res-empty">Cargando…</div></div>
+
+      <div class="res-add-grid">
+        <form class="res-add-box" id="addLinkForm">
+          <div class="res-add-title">+ Agregar enlace</div>
+          <input type="text" id="linkTitle" placeholder="Título" required maxlength="80">
+          <input type="url" id="linkUrl" placeholder="https://..." required maxlength="400">
+          <button type="submit" class="btn-add">Publicar enlace en GitHub ↗</button>
+          <p class="res-hint">Se abre GitHub con el archivo ya preparado — solo confirma con “Commit changes”.</p>
+        </form>
+        <form class="res-add-box" id="addFileForm">
+          <div class="res-add-title">+ Agregar archivo</div>
+          <input type="file" id="fileInput" required>
+          <button type="submit" class="btn-add">Subir en GitHub ↗</button>
+          <p class="res-hint">Se abre GitHub para arrastrar ahí el mismo archivo y confirmar.</p>
+        </form>
+      </div>
+    </div>
+    <div class="res-cols">`;
     COURSES.forEach(c=>{
       html += `<div class="res-col">
         <h3><span class="dot"></span>${esc(c.label)}</h3>
@@ -583,6 +674,30 @@
     });
     html += `</div>`;
     document.getElementById('resourcesWrap').innerHTML = html;
+
+    loadResourceItems();
+
+    document.getElementById('addLinkForm').addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const title = document.getElementById('linkTitle').value.trim();
+      const url = document.getElementById('linkUrl').value.trim();
+      if (!title || !url) return;
+      const params = new URLSearchParams({
+        filename: newLinkFilename(),
+        value: `TITLE: ${title}\nURL: ${url}\n`,
+      });
+      window.open(`${REPO_NEW_FILE}?${params.toString()}`, '_blank', 'noopener');
+      e.target.reset();
+    });
+
+    document.getElementById('addFileForm').addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const f = document.getElementById('fileInput').files[0];
+      if (!f) return;
+      window.open(REPO_UPLOAD, '_blank', 'noopener');
+      window.alert(`Se abrió GitHub en una pestaña nueva.\n\nArrastra ahí el archivo "${f.name}" y confirma "Commit changes" para publicarlo.`);
+      e.target.reset();
+    });
   }
 
   function renderMasthead(){
